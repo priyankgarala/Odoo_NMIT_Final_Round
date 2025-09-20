@@ -1,5 +1,5 @@
 import pool from "../config/db.js";
-import { calculateProductTaxes } from "../utils/taxCalculator.js";
+import { getDefaultAccountIds } from "../utils/DefaultAccountIds.js";
 
 const mapRowToProduct = (row) => {
   if (!row) return null;
@@ -38,11 +38,14 @@ export const createProduct = async (productData) => {
   let finalSalesAccountId = sales_account_id;
   let finalPurchaseAccountId = purchase_account_id;
 
+  
   if (!sales_account_id || !purchase_account_id) {
     try {
       const defaultAccounts = await getDefaultAccountIds();
       finalSalesAccountId = sales_account_id || defaultAccounts.sales_account_id;
       finalPurchaseAccountId = purchase_account_id || defaultAccounts.purchase_account_id;
+      console.log(finalPurchaseAccountId);
+      console.log(finalPurchaseAccountId);
     } catch (error) {
       console.warn("Warning: Could not get default account IDs, using provided values or null:", error.message);
     }
@@ -125,46 +128,6 @@ export const updateProductById = async (productId, updateData) => {
   };
   const { rows } = await pool.query(query);
   return mapRowToProduct(rows[0]);
-};
-
-export const findProductWithTaxes = async (productId) => {
-  const query = {
-    text: `
-      SELECT p.*, 
-             COALESCE(
-               json_agg(
-                 json_build_object(
-                   'id', pt.id,
-                   'tax_id', pt.tax_id,
-                   'applicable_on', pt.applicable_on,
-                   'tax_name', t.name,
-                   'computation_method', t.computation_method,
-                   'tax_value', t.value,
-                   'tax_description', t.description
-                 )
-               ) FILTER (WHERE pt.id IS NOT NULL), 
-               '[]'::json
-             ) as taxes
-      FROM products p
-      LEFT JOIN product_taxes pt ON p.id = pt.product_id
-      LEFT JOIN taxes t ON pt.tax_id = t.id AND t.is_active = true
-      WHERE p.id = $1
-      GROUP BY p.id
-    `,
-    values: [productId],
-  };
-  
-  const { rows } = await pool.query(query);
-  if (rows.length === 0) return null;
-  
-  const product = mapRowToProduct(rows[0]);
-  product.taxes = rows[0].taxes;
-  
-  // Add calculated tax amounts
-  const taxCalculation = calculateProductTaxes(product);
-  product.tax_calculation = taxCalculation;
-  
-  return product;
 };
 
 export const deleteProductById = async (productId) => {

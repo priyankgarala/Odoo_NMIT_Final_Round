@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS chart_of_accounts (
     account_name VARCHAR(150) NOT NULL UNIQUE,
     type VARCHAR(20) NOT NULL CHECK (type IN ('asset', 'liability', 'expense', 'income', 'equity')),
     parent_account_id INT REFERENCES chart_of_accounts(id) ON DELETE SET NULL, -- for hierarchy
-    description TEXT,
+    code VARCHAR(5),
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

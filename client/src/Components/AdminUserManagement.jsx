@@ -10,6 +10,17 @@ export default function AdminUserManagement() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [contactFormData, setContactFormData] = useState({
+    contactName: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    postcode: "",
+    image: null
+  });
 
   const navigate = useNavigate();
 
@@ -32,6 +43,45 @@ export default function AdminUserManagement() {
     fetchRoles();
     fetchUsers();
   }, []);
+
+
+  const handleContactChange = (e) => {
+    const { name, value, files } = e.target;
+    if (name === "image") {
+      setContactFormData(prev => ({ ...prev, image: files[0] }));
+    } else {
+      setContactFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleContactSubmit = async (e) => {
+    e.preventDefault();
+  
+    // Form validation (basic example)
+    if (!contactFormData.contactName || !contactFormData.email) {
+      setError("Contact Name and Email are required");
+      return;
+    }
+  
+    try {
+      // Example API call:
+      // await createContactMaster(contactFormData);
+      setSuccess("Contact created successfully");
+      setShowContactForm(false);
+      setContactFormData({
+        contactName: "",
+        email: "",
+        phone: "",
+        address: "",
+        city: "",
+        state: "",
+        postcode: "",
+        image: null
+      });
+    } catch (err) {
+      setError("Failed to create contact");
+    }
+  };
 
   const fetchRoles = async () => {
     try {
@@ -165,7 +215,7 @@ export default function AdminUserManagement() {
           Create User
         </button>
         <button
-          onClick={() => navigate('/admin/create_contact_master')}
+          onClick={() => setShowContactForm(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
@@ -198,6 +248,89 @@ export default function AdminUserManagement() {
           {success}
         </div>
       )}
+
+    {showContactForm && (
+      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium text-gray-900">Create Contact</h3>
+            <button onClick={() => setShowContactForm(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+          </div>
+
+          <form onSubmit={handleContactSubmit} className="space-y-3">
+            <input
+              type="text"
+              name="contactName"
+              placeholder="Contact Name"
+              value={contactFormData.contactName}
+              onChange={handleContactChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              required
+            />
+            <input
+              type="email"
+              name="email"
+              placeholder="Email"
+              value={contactFormData.email}
+              onChange={handleContactChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              required
+            />
+            <input
+              type="tel"
+              name="phone"
+              placeholder="Phone"
+              value={contactFormData.phone}
+              onChange={handleContactChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+            <input
+              type="text"
+              name="address"
+              placeholder="Address"
+              value={contactFormData.address}
+              onChange={handleContactChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+            <input
+              type="text"
+              name="city"
+              placeholder="City"
+              value={contactFormData.city}
+              onChange={handleContactChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+            <input
+              type="text"
+              name="state"
+              placeholder="State"
+              value={contactFormData.state}
+              onChange={handleContactChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+            <input
+              type="text"
+              name="postcode"
+              placeholder="Postcode"
+              value={contactFormData.postcode}
+              onChange={handleContactChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+            <input
+              type="file"
+              name="image"
+              onChange={handleContactChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+
+            <div className="flex justify-end gap-2 pt-3">
+              <button type="button" onClick={() => setShowContactForm(false)} className="px-4 py-2 bg-gray-200 rounded">Cancel</button>
+              <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">Create</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
 
       {/* Users List */}
       <div className="bg-white shadow rounded-lg">
