@@ -13,7 +13,7 @@ import path from 'path';
 import { notFound, errorHandler } from './src/middlewares/errorHandler.js';
 import pool from './src/config/db.js';
 import { createSampleTaxes } from './src/utils/createSampleTaxes.js';
-
+import purchaseOrderRoutes from './src/routes/purchaseOrderRoutes.js'
 const app = express();
 
 
@@ -36,6 +36,7 @@ app.use("/api/user-management", userManagementRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/taxes", taxRoutes);
 app.use("/api/uploads", uploadRoutes);
+app.use("/api/purchase-orders", purchaseOrderRoutes);
 
 // serve uploaded files
 app.use('/uploads', (req, res, next) => {
