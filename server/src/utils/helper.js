@@ -7,7 +7,7 @@ export const signToken = (payload) => {
 }
 
 export const verifyToken = (token) => {
-    const secret = process.env.JWT_SECRET || 'hackathondevelopmentauth';
+    const secret = process.env.JWT_SECRET || 'hackathondevelopment';
     const decoded = jsonwebtoken.verify(token, secret);
     return decoded.id;
 }

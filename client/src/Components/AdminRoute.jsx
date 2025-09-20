@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../utils/axiosInstance.js";
+import { getAllUsers } from "../api/userManagement.js";
 
 export default function AdminRoute({ children }) {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -11,7 +12,7 @@ export default function AdminRoute({ children }) {
     const checkAdminStatus = async () => {
       try {
         // Try to make a request that requires admin access
-        const response = await axiosInstance.get("/api/user-management/admin/users");
+        const response = await getAllUsers();
         setIsAdmin(true);
       } catch (error) {
         if (error.response?.status === 403) {
