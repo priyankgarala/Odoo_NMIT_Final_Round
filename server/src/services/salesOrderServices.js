@@ -10,15 +10,15 @@ export const createSalesOrder = async (orderData, items) => {
 
     // Insert into sales_orders
     const orderQuery = `
-      INSERT INTO sales_orders (customer_id, order_date, subtotal, tax, grand_total)
+      INSERT INTO sales_orders (customer_id, order_date, total_amount, tax_amount, grand_total)
       VALUES ($1, $2, $3, $4, $5)
       RETURNING *;
     `;
     const orderValues = [
       orderData.customer_id,
       orderData.order_date || new Date(),
-      orderData.subtotal || 0,
-      orderData.tax || 0,
+      orderData.total_amount || 0,
+      orderData.tax_amount || 0,
       orderData.grand_total || 0
     ];
     const { rows: orderRows } = await client.query(orderQuery, orderValues);
