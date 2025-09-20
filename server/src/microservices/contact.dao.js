@@ -128,6 +128,20 @@ export const deactivateContact = async (id) => {
 };
 
 /**
+ * Delete contact (soft delete)
+ */
+export const deleteContact = async (id) => {
+  const result = await pool.query(
+    `UPDATE contacts 
+     SET is_active = false, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $1
+     RETURNING *`,
+    [id]
+  );
+  return result.rows[0];
+};
+
+/**
  * Link contact to user (when granting login access)
  */
 export const linkContactToUser = async (contactId, userId) => {
