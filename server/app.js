@@ -4,11 +4,12 @@ import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import authRoutes from './src/routes/authRoutes.js';
 import userRoutes from './src/routes/userRoutes.js';
+import userManagementRoutes from './src/routes/userManagementRoutes.js';
 import cors from 'cors';
 import productRoutes from './src/routes/productRoutes.js';
 import uploadRoutes from './src/routes/uploadRoutes.js';
 import path from 'path';
-import { notFound, errorHandler } from './src/middlewares/errorHandlers.js';
+import { notFound, errorHandler } from './src/middlewares/errorHandler.js';
 import pool from './src/config/db.js';
 
 const app = express();
@@ -29,6 +30,7 @@ app.use(cookieParser());
 // routes
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/user-management", userManagementRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/uploads", uploadRoutes);
 

@@ -16,10 +16,10 @@ export default function Login() {
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <InputField
-            label="Email"
-            type="email"
-            name="email"
-            value={formData.email}
+            label="Login ID or Email"
+            type="text"
+            name="loginIdentifier"
+            value={formData.loginIdentifier}
             onChange={handleChange}
             required
           />

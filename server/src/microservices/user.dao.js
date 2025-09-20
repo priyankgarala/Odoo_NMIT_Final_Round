@@ -6,7 +6,27 @@ import pool from "../config/db.js";
  * Returns the first user that matches the provided email.
  */
 export const findUserByEmail = async (email) => {
-  const result = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+  const result = await pool.query(
+    `SELECT u.*, r.name as role_name, r.permissions 
+     FROM users u 
+     LEFT JOIN roles r ON u.role_id = r.id 
+     WHERE u.email = $1 AND u.is_active = true`,
+    [email]
+  );
+  return result.rows[0];
+};
+
+/**
+ * Returns the first user that matches the provided login_id.
+ */
+export const findUserByLoginId = async (loginId) => {
+  const result = await pool.query(
+    `SELECT u.*, r.name as role_name, r.permissions 
+     FROM users u 
+     LEFT JOIN roles r ON u.role_id = r.id 
+     WHERE u.login_id = $1 AND u.is_active = true`,
+    [loginId]
+  );
   return result.rows[0];
 };
 
@@ -23,9 +43,18 @@ export const findUserByEmailAndPassword = async (email) => {
  * Fetches a user by id.
  */
 export const findUserById = async (id) => {
-  const result = await pool.query("SELECT * FROM users WHERE id = $1", [id]);
+  console.log("Finding user with ID:", id);
+  const result = await pool.query(
+    `SELECT u.*, r.name as role_name, r.permissions 
+     FROM users u 
+     LEFT JOIN roles r ON u.role_id = r.id 
+     WHERE u.id = $1 AND u.is_active = true`,
+    [id]
+  );
+  console.log("DB result:", result.rows);
   return result.rows[0];
 };
+
 
 /**
  * Updates profile fields and returns the updated user row.
@@ -48,14 +77,36 @@ export const updateUserProfileById = async ({ id, name, email, bio, avatar }) =>
 /**
  * Inserts a verified user. Used after OTP verification succeeds.
  */
-export const createUser = async (name, email, password) => {
+export const createUser = async (name, loginId, email, password, roleId = null) => {
   const result = await pool.query(
-    `INSERT INTO users (name, email, password, is_verified)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO users (name, login_id, email, password, role_id, is_verified)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
-    [name, email, password, true]
+    [name, loginId, email, password, roleId, true]
   );
   return result.rows[0];
+};
+
+/**
+ * Get all users with their roles
+ */
+export const getAllUsers = async () => {
+  const result = await pool.query(
+    `SELECT u.*, r.name as role_name, r.permissions 
+     FROM users u 
+     LEFT JOIN roles r ON u.role_id = r.id 
+     WHERE u.is_active = true
+     ORDER BY u.name`
+  );
+  return result.rows;
+};
+
+/**
+ * Check if login_id already exists
+ */
+export const checkLoginIdExists = async (loginId) => {
+  const result = await pool.query("SELECT id FROM users WHERE login_id = $1", [loginId]);
+  return result.rows.length > 0;
 };
 
 /**
@@ -73,13 +124,13 @@ export const updateUserPasswordByEmail = async (email, passwordHash) => {
 /**
  * Upserts an OTP for a given email and type, replacing existing values.
  */
-export const upsertOtp = async ({ userId = null, name = null, email, type, password = null, otp, otpExpires }) => {
+export const upsertOtp = async ({ userId = null, name = null, email, loginId = null, type, password = null, roleId = null, otp, otpExpires }) => {
   await pool.query(
-    `INSERT INTO otps (user_id, name, email, type, password, otp, otp_expires)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO otps (user_id, name, email, login_id, type, password, role_id, otp, otp_expires)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      ON CONFLICT (email,type) 
-     DO UPDATE SET user_id = EXCLUDED.user_id, name = EXCLUDED.name, password = EXCLUDED.password, otp = EXCLUDED.otp, otp_expires = EXCLUDED.otp_expires`,
-    [userId, name, email,type,password, otp, otpExpires]
+     DO UPDATE SET user_id = EXCLUDED.user_id, name = EXCLUDED.name, login_id = EXCLUDED.login_id, password = EXCLUDED.password, role_id = EXCLUDED.role_id, otp = EXCLUDED.otp, otp_expires = EXCLUDED.otp_expires`,
+    [userId, name, email, loginId, type, password, roleId, otp, otpExpires]
   );
 };
 

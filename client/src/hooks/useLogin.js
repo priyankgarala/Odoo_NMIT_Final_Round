@@ -5,7 +5,7 @@ import { loginUser } from "../api/auth.js";
 import { loginSchema } from "../utils/validator.js";
 
 export function useLogin() {
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [formData, setFormData] = useState({ loginIdentifier: "", password: "" });
   const [errors, setErrors] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -20,19 +20,19 @@ export function useLogin() {
     setLoading(true);
     setSuccess(false);
 
-    const result = loginSchema.safeParse(formData);
-    if (!result.success) {
-      setErrors(result.error.errors[0].message);
+    // Basic validation
+    if (!formData.loginIdentifier || !formData.password) {
+      setErrors("Please fill in all fields");
       setLoading(false);
       return;
     }
 
     try {
-      await loginUser(formData.email, formData.password);
+      await loginUser(formData.loginIdentifier, formData.password);
       navigate("/");
       setSuccess(true);
       setErrors("");
-      setFormData({ email: "", password: "" });
+      setFormData({ loginIdentifier: "", password: "" });
     } catch (err) {
       const backendMessage = err?.response?.data?.message;
       const networkMessage = err?.message;

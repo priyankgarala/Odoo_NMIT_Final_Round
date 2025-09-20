@@ -4,6 +4,8 @@ import PrivateRoute from "./Components/PrivateRoute";
 import ProfilePage from "./pages/ProfilePage";
 import Login from "./Components/Login";
 import Register from "./Components/Register";
+import AdminUserManagement from "./Components/AdminUserManagement";
+import AdminRoute from "./Components/AdminRoute";
 import { useTheme } from "./ThemeContext.jsx";
 import VerifyOTP from "./pages/VerifyOTP";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -32,6 +34,15 @@ export default function App() {
         <Route path="/profile" element={
           <PrivateRoute>
             <ProfilePage />
+          </PrivateRoute>
+        } />
+        
+        {/* Admin Routes */}
+        <Route path="/admin/users" element={
+          <PrivateRoute>
+            <AdminRoute>
+              <AdminUserManagement />
+            </AdminRoute>
           </PrivateRoute>
         } />
       

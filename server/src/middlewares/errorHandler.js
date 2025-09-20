@@ -1,26 +1,14 @@
-import { verifyToken } from "../utils/helper.js";
-import { findUserById } from "../microservices/user.dao.js";
-import HttpError from "../utils/HttpError.js";
-
-export const authenticateToken = async (req, res, next) => {
-    try {
-        // Get token from cookies
-        const token = req.cookies.accessToken;
-        
-        if (!token) throw HttpError.unauthorized("Access token required");
-
-        // Verify the token
-        const userId = verifyToken(token);
-        
-        // Find user by ID
-        const user = await findUserById(userId);
-        
-        if (!user) throw HttpError.unauthorized("User not found");
-
-        // Set user in request object
-        req.user = user;
-        next();
-    } catch (error) {
-        return next(HttpError.unauthorized(error.message || "Invalid or expired token"));
+export const notFound = (req, res, next) => {
+    res.status(404).json({ message: `Route ${req.originalUrl} not found` });
+  };
+  
+  export const errorHandler = (err, req, res, next) => {
+    const status = err.status || 500;
+    const message = err.message || 'Internal Server Error';
+    if (process.env.NODE_ENV !== 'test') {
+      console.error(`[${new Date().toISOString()}]`, err.stack || err);
     }
-};
+    res.status(status).json({ message });
+  };
+  
+  
