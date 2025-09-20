@@ -13,6 +13,8 @@ import { useTheme } from "./ThemeContext.jsx";
 import VerifyOTP from "./pages/VerifyOTP";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import PurchaseOrder from "./Components/PurchaseOrder.jsx";
+import SalesOrder from "./Components/SalesOrder.jsx";
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
@@ -69,6 +71,22 @@ export default function App() {
           <PrivateRoute>
             <AdminRoute>
               <TaxCalculationDemo />
+            </AdminRoute>
+          </PrivateRoute>
+        } />
+
+        <Route path="/admin/purchase-orders" element={
+          <PrivateRoute>
+            <AdminRoute>
+              <PurchaseOrder />
+            </AdminRoute>
+          </PrivateRoute>
+        } />
+
+        <Route path="/admin/sales-orders" element={
+          <PrivateRoute>
+            <AdminRoute>
+              <SalesOrder />
             </AdminRoute>
           </PrivateRoute>
         } />
