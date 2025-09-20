@@ -2,28 +2,17 @@
 
 import { useState, useEffect } from "react"
 import { HomeIcon, ArrowLeftIcon } from "lucide-react"
-
-// Dummy API endpoints (replace with real API calls)
-const API = {
-  getVendors: async () => [
-    { id: 1, name: "Vendor A" },
-    { id: 2, name: "Vendor B" },
-  ],
-  getProducts: async () => [
-    { id: 1, name: "Product X", price: 100 },
-    { id: 2, name: "Product Y", price: 200 },
-  ],
-  createPurchaseOrder: async (data) => {
-    // Simulate API call
-    return { success: true, id: Math.floor(Math.random() * 1000), ...data }
-  },
-}
+import { getVendors } from "../api/contact.js"
+import { getPublicProducts } from "../api/product.js"
+import { createPurchaseOrder } from "../api/purchase_order.js"
 
 const STATUS_OPTIONS = ["DRAFT", "CONFIRMED", "BILLED", "CANCELLED"]
 
 export default function PurchaseOrderPage() {
   const [vendors, setVendors] = useState([])
   const [products, setProducts] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
   const [order, setOrder] = useState({
     vendor_id: "",
     order_date: new Date().toISOString().slice(0, 10),
@@ -39,8 +28,25 @@ export default function PurchaseOrderPage() {
   const [message, setMessage] = useState("")
 
   useEffect(() => {
-    API.getVendors().then(setVendors)
-    API.getProducts().then(setProducts)
+    const fetchData = async () => {
+      setLoading(true)
+      setError("")
+      try {
+        const [vendorsData, productsData] = await Promise.all([
+          getVendors(),
+          getPublicProducts()
+        ])
+        setVendors(vendorsData.contacts || vendorsData || [])
+        setProducts(productsData.products || productsData || [])
+      } catch (err) {
+        console.error("Error fetching data:", err)
+        setError("Failed to load vendors and products. Please try again.")
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchData()
   }, [])
 
   const handleOrderChange = (e) => {
@@ -101,24 +107,44 @@ export default function PurchaseOrderPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const totals = calculateTotals()
-    const payload = {
-      ...order,
-      total_amount: totals.total_amount,
-      tax_amount: totals.tax_amount,
-      grand_total: totals.grand_total,
-    }
-    const res = await API.createPurchaseOrder(payload)
-    if (res.success) {
-      setMessage("Purchase Order Created! ID: " + res.id)
+    setLoading(true)
+    setError("")
+    setMessage("")
+    
+    try {
+      const totals = calculateTotals()
+      const payload = {
+        orderData: {
+          vendor_id: order.vendor_id,
+          order_date: order.order_date,
+          status: order.status,
+          total_amount: parseFloat(totals.total_amount),
+          tax_amount: parseFloat(totals.tax_amount),
+          grand_total: parseFloat(totals.grand_total),
+        },
+        items: order.items.map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          tax_rate: item.tax_rate,
+          tax_amount: item.tax_amount,
+          line_total: item.line_total,
+        }))
+      }
+      
+      const res = await createPurchaseOrder(payload)
+      setMessage("Purchase Order Created Successfully! ID: " + res.data?.id)
       setOrder({
         vendor_id: "",
         order_date: new Date().toISOString().slice(0, 10),
         status: "DRAFT",
         items: [],
       })
-    } else {
-      setMessage("Failed to create Purchase Order.")
+    } catch (err) {
+      console.error("Error creating purchase order:", err)
+      setError("Failed to create Purchase Order. Please try again.")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -159,7 +185,7 @@ export default function PurchaseOrderPage() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" disabled={loading}>
           <div className="grid grid-cols-2 gap-8 mb-8">
             <div className="space-y-4">
               <div>
@@ -175,7 +201,8 @@ export default function PurchaseOrderPage() {
                   value={order.vendor_id}
                   onChange={(e) => setOrder({ ...order, vendor_id: e.target.value })}
                   required
-                  className="w-full px-3 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  disabled={loading}
+                  className="w-full px-3 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="" className="bg-gray-800">
                     Azure Interior
@@ -209,7 +236,8 @@ export default function PurchaseOrderPage() {
                   name="order_date"
                   value={order.order_date}
                   onChange={handleOrderChange}
-                  className="mt-2 px-3 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  disabled={loading}
+                  className="mt-2 px-3 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   required
                 />
               </div>
@@ -317,7 +345,8 @@ export default function PurchaseOrderPage() {
               <select
                 value={item.product_id}
                 onChange={(e) => setItem({ ...item, product_id: e.target.value })}
-                className="px-3 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={loading}
+                className="px-3 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <option value="" className="bg-gray-800">
                   Select Product
@@ -337,7 +366,8 @@ export default function PurchaseOrderPage() {
                 value={item.quantity}
                 onChange={handleItemChange}
                 placeholder="Quantity"
-                className="px-3 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={loading}
+                className="px-3 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
               />
 
               <input
@@ -348,7 +378,8 @@ export default function PurchaseOrderPage() {
                 value={item.unit_price}
                 onChange={handleItemChange}
                 placeholder="Unit Price"
-                className="px-3 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={loading}
+                className="px-3 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
               />
 
               <input
@@ -359,19 +390,43 @@ export default function PurchaseOrderPage() {
                 value={item.tax_rate}
                 onChange={handleItemChange}
                 placeholder="Tax Rate (%)"
-                className="px-3 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={loading}
+                className="px-3 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
               />
 
               <button
                 type="button"
                 onClick={addItem}
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors"
+                disabled={loading}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-md transition-colors"
               >
                 Add
               </button>
             </div>
           </div>
+          
+          <div className="flex justify-end mt-6">
+            <button
+              type="submit"
+              disabled={loading || order.items.length === 0}
+              className="px-8 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-md transition-colors font-medium"
+            >
+              {loading ? "Creating..." : "Create Purchase Order"}
+            </button>
+          </div>
         </form>
+
+        {loading && (
+          <div className="mt-6 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
+            <div className="text-blue-400">Loading...</div>
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-6 p-4 bg-red-900/20 border border-red-700 rounded-lg">
+            <div className="text-red-400">{error}</div>
+          </div>
+        )}
 
         {message && (
           <div className="mt-6 p-4 bg-green-900/20 border border-green-700 rounded-lg">

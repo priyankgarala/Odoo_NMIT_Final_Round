@@ -13,8 +13,10 @@ import path from 'path';
 import { notFound, errorHandler } from './src/middlewares/errorHandler.js';
 import pool from './src/config/db.js';
 import { createSampleTaxes } from './src/utils/createSampleTaxes.js';
+import { createSampleVendors } from './src/utils/createSampleVendors.js';
 import purchaseOrderRoutes from './src/routes/purchaseOrderRoutes.js'
 import salesOrderRoutes from './src/routes/salesOrderRoutes.js'
+import contactRoutes from './src/routes/contactRoutes.js'
 const app = express();
 
 
@@ -39,6 +41,7 @@ app.use("/api/taxes", taxRoutes);
 app.use("/api/uploads", uploadRoutes);
 app.use("/api/purchase-orders", purchaseOrderRoutes);
 app.use("/api/sales-orders",salesOrderRoutes);
+app.use("/api/contacts", contactRoutes);
 
 // serve uploaded files
 app.use('/uploads', (req, res, next) => {
@@ -58,6 +61,9 @@ app.listen(5000, async () => {
     
     // Create sample taxes if they don't exist
     await createSampleTaxes();
+    
+    // Create sample vendors if they don't exist
+    await createSampleVendors();
     
   } catch (error) {
     console.error("❌ PostgreSQL connection failed:", error.message);
