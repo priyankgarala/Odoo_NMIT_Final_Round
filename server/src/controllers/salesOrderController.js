@@ -2,7 +2,7 @@ import {
   createSalesOrder,
   confirmSalesOrder,
   generateCustomerInvoice
-} from "../services/salesOrderService.js";
+} from "../services/salesOrderServices.js";
 
 // POST /api/sales-orders
 export const createSalesOrderController = async (req, res) => {
