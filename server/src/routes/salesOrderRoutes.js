@@ -4,11 +4,12 @@ import {
   confirmSalesOrderController,
   generateCustomerInvoiceController
 } from "../controllers/salesOrderController.js";
+import { authenticateToken } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/", createSalesOrderController);
-router.put("/:id/confirm", confirmSalesOrderController);
-router.put("/:id/invoice", generateCustomerInvoiceController);
+router.post("/", authenticateToken, createSalesOrderController);
+router.put("/:id/confirm", authenticateToken, confirmSalesOrderController);
+router.put("/:id/invoice", authenticateToken, generateCustomerInvoiceController);
 
 export default router;
