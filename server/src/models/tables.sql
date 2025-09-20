@@ -72,22 +72,3 @@ CREATE INDEX IF NOT EXISTS users_login_id_idx ON users(login_id);
 CREATE INDEX IF NOT EXISTS users_role_id_idx ON users(role_id);
 CREATE INDEX IF NOT EXISTS contacts_user_id_idx ON contacts(user_id);
 CREATE INDEX IF NOT EXISTS contacts_type_idx ON contacts(contact_type);
-
--- PRODUCTS table
-CREATE TABLE IF NOT EXISTS products (
-    id SERIAL PRIMARY KEY,
-    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    price NUMERIC(12,2) NOT NULL,
-    quantity INT DEFAULT 1,
-    category VARCHAR(100),
-    condition VARCHAR(20) DEFAULT 'new',
-    image_url TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Helpful index for user-owned products
-CREATE INDEX IF NOT EXISTS products_user_id_active_idx ON products(user_id) WHERE is_active = TRUE;
