@@ -64,8 +64,59 @@ CREATE TABLE IF NOT EXISTS otps (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS products (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    type VARCHAR(20) NOT NULL CHECK (type IN ('goods', 'service')),
+    sales_price NUMERIC(12,2) DEFAULT 0.00,
+    purchase_price NUMERIC(12,2) DEFAULT 0.00,
+    sales_account_id INT REFERENCES chart_of_accounts(id) ON DELETE SET NULL,
+    purchase_account_id INT REFERENCES chart_of_accounts(id) ON DELETE SET NULL,
+    hsn_code VARCHAR(50),
+    category VARCHAR(100),
+    created_by INT REFERENCES users(id) ON DELETE SET NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS taxes (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,   -- e.g. GST 5%
+    computation_method VARCHAR(20) NOT NULL CHECK (computation_method IN ('percentage', 'fixed')),
+    value NUMERIC(10,2) NOT NULL,        -- 5.00 or 100.00
+    applicable_on VARCHAR(20) NOT NULL CHECK (applicable_on IN ('sales', 'purchase', 'both')),
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS product_taxes (
+    id SERIAL PRIMARY KEY,
+    product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    tax_id INT NOT NULL REFERENCES taxes(id) ON DELETE CASCADE,
+    applicable_on VARCHAR(20) NOT NULL CHECK (applicable_on IN ('sales', 'purchase')),
+    UNIQUE(product_id, tax_id, applicable_on)
+);
+
+CREATE TABLE IF NOT EXISTS chart_of_accounts (
+    id SERIAL PRIMARY KEY,
+    account_name VARCHAR(150) NOT NULL UNIQUE,
+    type VARCHAR(20) NOT NULL CHECK (type IN ('asset', 'liability', 'expense', 'income', 'equity')),
+    parent_account_id INT REFERENCES chart_of_accounts(id) ON DELETE SET NULL, -- for hierarchy
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Ensure only one OTP per email & type
+CREATE INDEX IF NOT EXISTS coa_type_idx ON chart_of_accounts(type);
 CREATE UNIQUE INDEX otps_email_type_idx ON otps(email, type);
+CREATE INDEX IF NOT EXISTS products_category_idx ON products(category);
+CREATE INDEX IF NOT EXISTS products_type_idx ON products(type);
+CREATE INDEX IF NOT EXISTS product_taxes_product_idx ON product_taxes(product_id);
 
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS users_login_id_idx ON users(login_id);

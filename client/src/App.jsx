@@ -10,6 +10,7 @@ import { useTheme } from "./ThemeContext.jsx";
 import VerifyOTP from "./pages/VerifyOTP";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import CreateContactMaster from "./Components/CreateContactMaster.jsx";
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
@@ -45,7 +46,15 @@ export default function App() {
             </AdminRoute>
           </PrivateRoute>
         } />
-      
+
+        <Route path="/admin/create_contact_master" element={
+          <PrivateRoute>
+            <AdminRoute>
+              <CreateContactMaster/>
+            </AdminRoute>
+          </PrivateRoute>
+        } />
+
       </Routes>
     </Router>
   );

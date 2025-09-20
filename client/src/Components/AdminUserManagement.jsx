@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getAllRoles, adminCreateUser, getAllUsers } from "../api/userManagement.js";
 import { Loader2, Plus, Users, Shield, UserCheck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function AdminUserManagement() {
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -9,6 +10,8 @@ export default function AdminUserManagement() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -160,6 +163,27 @@ export default function AdminUserManagement() {
         >
           <Plus className="w-4 h-4" />
           Create User
+        </button>
+        <button
+          onClick={() => navigate('/admin/create_contact_master')}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Create Contact Master
+        </button>
+        <button
+          onClick={() => setShowCreateForm(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Create Product
+        </button>
+        <button
+          onClick={() => setShowCreateForm(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Create Tax Master
         </button>
       </div>
 
