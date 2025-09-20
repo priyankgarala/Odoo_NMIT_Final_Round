@@ -44,14 +44,17 @@ import {
     }
   };
   
-  export const update_product = async (req, res, next) => {
-    try {
-      const product = await updateMyProduct(req.user.id, req.params.id, req.body);
-      res.status(200).json(product);
-    } catch (error) {
-      next(HttpError.badRequest(error.message || "Failed to update product"));
-    }
-  };
+export const update_product = async (req, res, next) => {
+  try {
+    console.log("Update product request:", req.params.id, req.body); // Debug log
+    const product = await updateMyProduct(req.user.id, req.params.id, req.body);
+    console.log("Update product response:", product); // Debug log
+    res.status(200).json(product);
+  } catch (error) {
+    console.error("Update product error:", error); // Debug log
+    next(HttpError.badRequest(error.message || "Failed to update product"));
+  }
+};
   
   export const delete_product = async (req, res, next) => {
     try {

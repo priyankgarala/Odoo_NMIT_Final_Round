@@ -5,12 +5,14 @@ import ProfilePage from "./pages/ProfilePage";
 import Login from "./Components/Login";
 import Register from "./Components/Register";
 import AdminUserManagement from "./Components/AdminUserManagement";
+import TaxManagement from "./Components/TaxManagement";
+import ProductManagement from "./Components/ProductManagement";
+import TaxCalculationDemo from "./Components/TaxCalculationDemo";
 import AdminRoute from "./Components/AdminRoute";
 import { useTheme } from "./ThemeContext.jsx";
 import VerifyOTP from "./pages/VerifyOTP";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-import CreateContactMaster from "./Components/CreateContactMaster.jsx";
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
@@ -46,14 +48,32 @@ export default function App() {
             </AdminRoute>
           </PrivateRoute>
         } />
-
-        <Route path="/admin/create_contact_master" element={
+        
+        <Route path="/admin/taxes" element={
           <PrivateRoute>
             <AdminRoute>
-              <CreateContactMaster/>
+              <TaxManagement />
             </AdminRoute>
           </PrivateRoute>
         } />
+        
+        <Route path="/admin/products" element={
+          <PrivateRoute>
+            <AdminRoute>
+              <ProductManagement />
+            </AdminRoute>
+          </PrivateRoute>
+        } />
+        
+        <Route path="/admin/tax-demo" element={
+          <PrivateRoute>
+            <AdminRoute>
+              <TaxCalculationDemo />
+            </AdminRoute>
+          </PrivateRoute>
+        } />
+
+        
 
       </Routes>
     </Router>
