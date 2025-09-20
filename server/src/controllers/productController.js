@@ -64,6 +64,7 @@ export const update_product = async (req, res, next) => {
       next(HttpError.badRequest(error.message || "Failed to delete product"));
     }
   };
+
   
   export default {
     create_product,
