@@ -17,6 +17,7 @@ import { createSampleVendors } from './src/utils/createSampleVendors.js';
 import purchaseOrderRoutes from './src/routes/purchaseOrderRoutes.js'
 import salesOrderRoutes from './src/routes/salesOrderRoutes.js'
 import contactRoutes from './src/routes/contactRoutes.js'
+import userInvoiceRoutes from './src/routes/userInvoiceRoutes.js'
 const app = express();
 
 
@@ -42,6 +43,7 @@ app.use("/api/uploads", uploadRoutes);
 app.use("/api/purchase-orders", purchaseOrderRoutes);
 app.use("/api/sales-orders",salesOrderRoutes);
 app.use("/api/contacts", contactRoutes);
+app.use("/api/user-invoices", userInvoiceRoutes);
 
 // serve uploaded files
 app.use('/uploads', (req, res, next) => {

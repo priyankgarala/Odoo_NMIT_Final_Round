@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Users, Calculator, Package, Settings } from 'lucide-react'
+import { Plus, Users, Calculator, Package, Settings, FileText, ShoppingCart } from 'lucide-react'
 import axiosInstance from '../utils/axiosInstance'
 import { getPublicProducts } from '../api/product'
 import { calculateProductTaxes, formatPrice } from '../utils/taxCalculator'
@@ -86,6 +86,54 @@ const Dashboard = () => {
             <div className="ml-4">
               <h3 className="text-lg font-semibold text-gray-900">Tax Calculator</h3>
               <p className="text-sm text-gray-600">Test tax calculations</p>
+            </div>
+          </div>
+        </Link>
+      </div>
+
+      {/* Business Operations */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <Link 
+          to="/admin/sales-orders" 
+          className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow border border-gray-200"
+        >
+          <div className="flex items-center">
+            <div className="p-3 bg-green-100 rounded-lg">
+              <ShoppingCart className="w-6 h-6 text-green-600" />
+            </div>
+            <div className="ml-4">
+              <h3 className="text-lg font-semibold text-gray-900">Sales Orders</h3>
+              <p className="text-sm text-gray-600">Create and manage sales orders</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link 
+          to="/my-invoices" 
+          className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow border border-gray-200"
+        >
+          <div className="flex items-center">
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <FileText className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="ml-4">
+              <h3 className="text-lg font-semibold text-gray-900">My Invoices</h3>
+              <p className="text-sm text-gray-600">View and manage your invoices</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link 
+          to="/admin/purchase-orders" 
+          className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow border border-gray-200"
+        >
+          <div className="flex items-center">
+            <div className="p-3 bg-purple-100 rounded-lg">
+              <Package className="w-6 h-6 text-purple-600" />
+            </div>
+            <div className="ml-4">
+              <h3 className="text-lg font-semibold text-gray-900">Purchase Orders</h3>
+              <p className="text-sm text-gray-600">Manage vendor orders</p>
             </div>
           </div>
         </Link>
