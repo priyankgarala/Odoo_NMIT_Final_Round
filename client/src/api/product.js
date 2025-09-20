@@ -24,3 +24,4 @@ export const deleteProduct = async (axiosInstance, id) => {
   const { data } = await axiosInstance.delete(`/api/products/${id}`);
   return data;
 };
+
