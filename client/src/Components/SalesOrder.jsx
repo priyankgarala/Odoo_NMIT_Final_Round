@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { getCustomers } from "../api/contact"
 import { getPublicProducts } from "../api/product"
-import { createSalesOrder } from "../api/salesOrder"
+import { createSalesOrder, confirmSalesOrder, generateCustomerInvoice } from "../api/salesOrder"
 import axiosInstance from "../utils/axiosInstance"
 import { calculateProductTaxes } from "../utils/taxCalculator"
 
@@ -24,6 +24,8 @@ function SalesOrder() {
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState("")
+  const [createdOrderId, setCreatedOrderId] = useState(null)
+  const [orderStatus, setOrderStatus] = useState("DRAFT")
 
   useEffect(() => {
     fetchData()
@@ -109,17 +111,68 @@ function SalesOrder() {
 
       const result = await createSalesOrder(salesOrderData)
       setSuccess("Sales Order saved successfully!")
+      setCreatedOrderId(result.data.id)
+      setOrderStatus(result.data.status)
       
-      // Reset form
-      setOrder(initialOrder)
-      setItem({ product_id: "", quantity: 1 })
-      
+      // Don't reset form immediately - let user confirm and generate invoice
       setTimeout(() => setSuccess(""), 3000)
     } catch (err) {
       setError(err.response?.data?.message || "Failed to save sales order")
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleConfirmOrder = async () => {
+    if (!createdOrderId) return
+    
+    setSaving(true)
+    setError("")
+    
+    try {
+      const result = await confirmSalesOrder(createdOrderId)
+      setOrderStatus("CONFIRMED")
+      setSuccess("Sales Order confirmed successfully!")
+      setTimeout(() => setSuccess(""), 3000)
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to confirm sales order")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleGenerateInvoice = async () => {
+    if (!createdOrderId) return
+    
+    setSaving(true)
+    setError("")
+    
+    try {
+      const result = await generateCustomerInvoice(createdOrderId)
+      setOrderStatus("INVOICED")
+      setSuccess("Customer Invoice generated successfully!")
+      
+      // Reset form after successful invoice generation
+      setOrder(initialOrder)
+      setItem({ product_id: "", quantity: 1 })
+      setCreatedOrderId(null)
+      setOrderStatus("DRAFT")
+      
+      setTimeout(() => setSuccess(""), 5000)
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to generate invoice")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleResetForm = () => {
+    setOrder(initialOrder)
+    setItem({ product_id: "", quantity: 1 })
+    setCreatedOrderId(null)
+    setOrderStatus("DRAFT")
+    setError("")
+    setSuccess("")
   }
 
   const total_untaxed_amount = order.items.reduce((sum, i) => sum + i.untaxed_amount, 0)
@@ -336,15 +389,66 @@ function SalesOrder() {
 
         {/* Action Buttons */}
         <div className="flex justify-center gap-4">
-          <button
-            type="button"
-            disabled={!order.customer_id || order.items.length === 0 || saving}
-            onClick={handleSaveOrder}
-            className="px-8 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors font-medium"
-          >
-            {saving ? "Saving..." : "Save Sales Order"}
-          </button>
+          {!createdOrderId && (
+            <button
+              type="button"
+              disabled={!order.customer_id || order.items.length === 0 || saving}
+              onClick={handleSaveOrder}
+              className="px-8 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors font-medium"
+            >
+              {saving ? "Saving..." : "Save Sales Order"}
+            </button>
+          )}
+          
+          {createdOrderId && orderStatus === "DRAFT" && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={handleConfirmOrder}
+              className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors font-medium"
+            >
+              {saving ? "Confirming..." : "Confirm Order"}
+            </button>
+          )}
+          
+          {createdOrderId && orderStatus === "CONFIRMED" && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={handleGenerateInvoice}
+              className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors font-medium"
+            >
+              {saving ? "Generating..." : "Generate Invoice"}
+            </button>
+          )}
+          
+          {createdOrderId && (
+            <button
+              type="button"
+              onClick={handleResetForm}
+              className="px-8 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+            >
+              New Order
+            </button>
+          )}
         </div>
+        
+        {/* Order Status Display */}
+        {createdOrderId && (
+          <div className="mt-4 text-center">
+            <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium">
+              <span className="text-gray-300">Order Status: </span>
+              <span className={`ml-2 px-3 py-1 rounded-full ${
+                orderStatus === "DRAFT" ? "bg-yellow-100 text-yellow-800" :
+                orderStatus === "CONFIRMED" ? "bg-blue-100 text-blue-800" :
+                orderStatus === "INVOICED" ? "bg-green-100 text-green-800" :
+                "bg-gray-100 text-gray-800"
+              }`}>
+                {orderStatus}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

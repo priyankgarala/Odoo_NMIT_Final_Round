@@ -239,8 +239,27 @@ CREATE TABLE customer_invoice_items (
   line_total NUMERIC(15,2) GENERATED ALWAYS AS (quantity * unit_price) STORED
 );
 
-CREATE INDEX idx_invoice_items_invoice_id ON customer_invoice_items(invoice_id);
+CREATE INDEX idx_invoice_items_invoice_id ON customer_invoice_items(customer_invoice_id);
 CREATE INDEX idx_invoice_items_product_id ON customer_invoice_items(product_id);
+
+-- User Invoices table to track invoices for each logged-in user
+CREATE TABLE user_invoices (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    customer_invoice_id BIGINT NOT NULL REFERENCES customer_invoices(id) ON DELETE CASCADE,
+    invoice_number VARCHAR(50) NOT NULL,
+    invoice_date DATE NOT NULL,
+    due_date DATE NOT NULL,
+    amount_due NUMERIC(15,2) NOT NULL,
+    payment_status VARCHAR(30) CHECK (payment_status IN ('UNPAID','PARTIALLY_PAID','PAID')) DEFAULT 'UNPAID',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_user_invoices_user_id ON user_invoices(user_id);
+CREATE INDEX idx_user_invoices_customer_invoice_id ON user_invoices(customer_invoice_id);
+CREATE INDEX idx_user_invoices_payment_status ON user_invoices(payment_status);
+
 -- Ensure only one OTP per email & type
 CREATE INDEX IF NOT EXISTS coa_type_idx ON chart_of_accounts(type);
 CREATE UNIQUE INDEX otps_email_type_idx ON otps(email, type);

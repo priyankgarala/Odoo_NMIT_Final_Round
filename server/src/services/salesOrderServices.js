@@ -76,7 +76,7 @@ export const confirmSalesOrder = async (soId) => {
  * Generate Customer Invoice (CONFIRMED -> INVOICED)
  * Updates Inventory (-) and CoA
  */
-export const generateCustomerInvoice = async (soId) => {
+export const generateCustomerInvoice = async (soId, userId) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -94,25 +94,31 @@ export const generateCustomerInvoice = async (soId) => {
       [soId]
     );
 
-    // 2. Insert into customer_invoices
+    // 2. Generate invoice number
+    const invoiceNumber = `INV-${Date.now()}`;
+
+    // 3. Insert into customer_invoices
     const invoiceQuery = `
-      INSERT INTO customer_invoices (sales_order_id, invoice_date, subtotal, tax, grand_total, status)
-      VALUES ($1, $2, $3, $4, $5, 'INVOICED') RETURNING *;
+      INSERT INTO customer_invoices (invoice_number, customer_id, so_id, invoice_date, due_date, status, total_amount, created_by)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *;
     `;
     const invoiceValues = [
+      invoiceNumber,
+      salesOrder.customer_id,
       soId,
       new Date(),
-      salesOrder.subtotal,
-      salesOrder.tax,
-      salesOrder.grand_total
+      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      'UNPAID',
+      salesOrder.grand_total,
+      userId
     ];
     const { rows: invoiceRows } = await client.query(invoiceQuery, invoiceValues);
     const invoice = invoiceRows[0];
 
-    // 3. Insert invoice items
+    // 4. Insert invoice items
     const invoiceItemQuery = `
-      INSERT INTO customer_invoice_items (invoice_id, product_id, quantity, unit_price)
-      VALUES ($1, $2, $3, $4) RETURNING *;
+      INSERT INTO customer_invoice_items (customer_invoice_id, product_id, quantity, unit_price, tax_id)
+      VALUES ($1, $2, $3, $4, $5) RETURNING *;
     `;
     const insertedInvoiceItems = [];
     for (let item of items) {
@@ -120,37 +126,226 @@ export const generateCustomerInvoice = async (soId) => {
         invoice.id,
         item.product_id,
         item.quantity,
-        item.unit_price
+        item.unit_price,
+        null // tax_id can be null for now
       ];
       const { rows } = await client.query(invoiceItemQuery, itemValues);
       insertedInvoiceItems.push(rows[0]);
 
-      // 4. Update inventory (-)
+      // 5. Update inventory (-)
       await client.query(
         `UPDATE inventory SET quantity = quantity - $1, updated_at = CURRENT_TIMESTAMP WHERE product_id = $2`,
         [item.quantity, item.product_id]
       );
     }
 
-    // 5. Update CoA (simplified: Debit Accounts Receivable, Credit Sales Income)
-    await client.query(
-      `
-      INSERT INTO transactions (coa_id, amount, type, reference_id, reference_type)
-      VALUES 
-        ((SELECT id FROM chart_of_accounts WHERE name = 'Accounts Receivable'), $1, 'DEBIT', $2, 'CUSTOMER_INVOICE'),
-        ((SELECT id FROM chart_of_accounts WHERE name = 'Sales Income'), $1, 'CREDIT', $2, 'CUSTOMER_INVOICE')
-      `,
-      [invoice.grand_total, invoice.id]
-    );
+    // 6. Insert into user_invoices table
+    const userInvoiceQuery = `
+      INSERT INTO user_invoices (user_id, customer_invoice_id, invoice_number, invoice_date, due_date, amount_due, payment_status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;
+    `;
+    const userInvoiceValues = [
+      userId,
+      invoice.id,
+      invoice.invoice_number,
+      invoice.invoice_date,
+      invoice.due_date,
+      invoice.total_amount,
+      'UNPAID'
+    ];
+    const { rows: userInvoiceRows } = await client.query(userInvoiceQuery, userInvoiceValues);
+    const userInvoice = userInvoiceRows[0];
 
-    // 6. Update SO status -> INVOICED
+    // 7. Update SO status -> INVOICED
     await client.query(
       "UPDATE sales_orders SET status = 'INVOICED', updated_at = CURRENT_TIMESTAMP WHERE id = $1",
       [soId]
     );
 
     await client.query("COMMIT");
-    return { invoice, items: insertedInvoiceItems };
+    return { invoice, items: insertedInvoiceItems, userInvoice };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+/**
+ * Get all customer invoices
+ */
+export const getAllCustomerInvoices = async () => {
+  const query = `
+    SELECT 
+      ci.*,
+      c.name as customer_name,
+      c.email as customer_email,
+      c.phone as customer_phone,
+      so.id as sales_order_id,
+      so.order_date as sales_order_date
+    FROM customer_invoices ci
+    LEFT JOIN contacts c ON ci.customer_id = c.id
+    LEFT JOIN sales_orders so ON ci.so_id = so.id
+    ORDER BY ci.created_at DESC
+  `;
+  const { rows } = await pool.query(query);
+  return rows;
+};
+
+/**
+ * Get user invoice by ID (for payment page)
+ */
+export const getUserInvoiceById = async (invoiceId) => {
+  const client = await pool.connect();
+  try {
+    // Get invoice details
+    const invoiceQuery = `
+      SELECT 
+        ui.*,
+        ci.invoice_number,
+        ci.invoice_date,
+        ci.due_date,
+        ci.total_amount,
+        ci.status as invoice_status,
+        c.name as customer_name,
+        c.email as customer_email,
+        c.phone as customer_phone,
+        c.address as customer_address
+      FROM user_invoices ui
+      LEFT JOIN customer_invoices ci ON ui.customer_invoice_id = ci.id
+      LEFT JOIN contacts c ON ci.customer_id = c.id
+      WHERE ui.customer_invoice_id = $1
+    `;
+    const { rows: invoiceRows } = await client.query(invoiceQuery, [invoiceId]);
+    if (!invoiceRows[0]) throw new Error("User invoice not found");
+    
+    const invoice = invoiceRows[0];
+
+    // Get invoice items
+    const itemsQuery = `
+      SELECT 
+        cii.*,
+        p.name as product_name,
+        p.hsn_code,
+        t.name as tax_name,
+        t.value as tax_rate
+      FROM customer_invoice_items cii
+      LEFT JOIN products p ON cii.product_id = p.id
+      LEFT JOIN taxes t ON cii.tax_id = t.id
+      WHERE cii.customer_invoice_id = $1
+    `;
+    const { rows: items } = await client.query(itemsQuery, [invoiceId]);
+
+    return { ...invoice, items };
+  } finally {
+    client.release();
+  }
+};
+
+/**
+ * Get customer invoice by ID with items
+ */
+export const getCustomerInvoiceById = async (invoiceId) => {
+  const client = await pool.connect();
+  try {
+    // Get invoice details
+    const invoiceQuery = `
+      SELECT 
+        ci.*,
+        c.name as customer_name,
+        c.email as customer_email,
+        c.phone as customer_phone,
+        c.address as customer_address,
+        so.id as sales_order_id,
+        so.order_date as sales_order_date
+      FROM customer_invoices ci
+      LEFT JOIN contacts c ON ci.customer_id = c.id
+      LEFT JOIN sales_orders so ON ci.so_id = so.id
+      WHERE ci.id = $1
+    `;
+    const { rows: invoiceRows } = await client.query(invoiceQuery, [invoiceId]);
+    if (!invoiceRows[0]) throw new Error("Invoice not found");
+    
+    const invoice = invoiceRows[0];
+
+    // Get invoice items
+    const itemsQuery = `
+      SELECT 
+        cii.*,
+        p.name as product_name,
+        p.hsn_code,
+        t.name as tax_name,
+        t.value as tax_rate
+      FROM customer_invoice_items cii
+      LEFT JOIN products p ON cii.product_id = p.id
+      LEFT JOIN taxes t ON cii.tax_id = t.id
+      WHERE cii.customer_invoice_id = $1
+    `;
+    const { rows: items } = await client.query(itemsQuery, [invoiceId]);
+
+    return { ...invoice, items };
+  } finally {
+    client.release();
+  }
+};
+
+/**
+ * Get all invoices for a specific user
+ */
+export const getUserInvoices = async (userId) => {
+  const query = `
+    SELECT 
+      ui.*,
+      ci.invoice_number,
+      ci.invoice_date,
+      ci.due_date,
+      ci.total_amount,
+      ci.status as invoice_status,
+      c.name as customer_name,
+      c.email as customer_email,
+      c.phone as customer_phone
+    FROM user_invoices ui
+    LEFT JOIN customer_invoices ci ON ui.customer_invoice_id = ci.id
+    LEFT JOIN contacts c ON ci.customer_id = c.id
+    WHERE ui.user_id = $1
+    ORDER BY ui.created_at DESC
+  `;
+  const { rows } = await pool.query(query, [userId]);
+  return rows;
+};
+
+/**
+ * Update invoice payment status
+ */
+export const updateInvoicePaymentStatus = async (userInvoiceId, paymentStatus) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Update user_invoices table
+    const userInvoiceQuery = `
+      UPDATE user_invoices 
+      SET payment_status = $1, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $2 
+      RETURNING *;
+    `;
+    const { rows: userInvoiceRows } = await client.query(userInvoiceQuery, [paymentStatus, userInvoiceId]);
+    if (!userInvoiceRows[0]) throw new Error("User invoice not found");
+    
+    const userInvoice = userInvoiceRows[0];
+
+    // Update customer_invoices table
+    const customerInvoiceQuery = `
+      UPDATE customer_invoices 
+      SET status = $1, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $2 
+      RETURNING *;
+    `;
+    const { rows: customerInvoiceRows } = await client.query(customerInvoiceQuery, [paymentStatus, userInvoice.customer_invoice_id]);
+
+    await client.query("COMMIT");
+    return { userInvoice, customerInvoice: customerInvoiceRows[0] };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

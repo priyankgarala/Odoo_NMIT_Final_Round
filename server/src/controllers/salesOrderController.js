@@ -56,7 +56,7 @@ export const confirmSalesOrderController = async (req, res) => {
 export const generateCustomerInvoiceController = async (req, res) => {
   try {
     const soId = req.params.id;
-    const invoice = await generateCustomerInvoice(soId);
+    const invoice = await generateCustomerInvoice(soId, req.user.id);
     res.json({ message: "Customer Invoice generated", data: invoice });
   } catch (error) {
     res.status(400).json({ message: error.message });
