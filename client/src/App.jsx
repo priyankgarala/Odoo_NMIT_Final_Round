@@ -15,6 +15,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import PurchaseOrder from "./Components/PurchaseOrder.jsx";
 import SalesOrder from "./Components/SalesOrder.jsx";
+import CustomerInvoice from "./Components/CustomerInvoice.jsx";
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
@@ -91,7 +92,13 @@ export default function App() {
           </PrivateRoute>
         } />
 
-        
+        <Route path="/admin/customer-invoices" element={
+          <PrivateRoute>
+            <AdminRoute>
+              <CustomerInvoice />
+            </AdminRoute>
+          </PrivateRoute>
+        } />
 
       </Routes>
     </Router>
