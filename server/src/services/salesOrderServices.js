@@ -3,31 +3,33 @@ import pool from "../config/db.js";
 /**
  * Create Sales Order
  */
-export const createSalesOrder = async (orderData, items) => {
+export const createSalesOrder = async (orderData, items, userId) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
     // Insert into sales_orders
     const orderQuery = `
-      INSERT INTO sales_orders (customer_id, order_date, total_amount, tax_amount, grand_total)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO sales_orders (customer_id, order_date, status, total_amount, tax_amount, grand_total, created_by)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *;
     `;
     const orderValues = [
       orderData.customer_id,
       orderData.order_date || new Date(),
+      orderData.status || 'DRAFT',
       orderData.total_amount || 0,
       orderData.tax_amount || 0,
-      orderData.grand_total || 0
+      orderData.grand_total || 0,
+      userId
     ];
     const { rows: orderRows } = await client.query(orderQuery, orderValues);
     const salesOrder = orderRows[0];
 
     // Insert items
     const itemQuery = `
-      INSERT INTO sales_order_items (sales_order_id, product_id, quantity, unit_price)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO sales_order_items (sales_order_id, product_id, quantity, unit_price, tax_rate, tax_amount, line_total)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *;
     `;
     const insertedItems = [];
@@ -36,7 +38,10 @@ export const createSalesOrder = async (orderData, items) => {
         salesOrder.id,
         item.product_id,
         item.quantity,
-        item.unit_price
+        item.unit_price,
+        item.tax_rate || 0,
+        item.tax_amount || 0,
+        item.line_total || (item.unit_price * item.quantity)
       ];
       const { rows } = await client.query(itemQuery, itemValues);
       insertedItems.push(rows[0]);
